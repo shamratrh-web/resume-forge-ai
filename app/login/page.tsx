@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthCallbackUrl } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +13,33 @@ import { FileText, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const description = searchParams.get("description");
+
+    if (!error) {
+      return;
+    }
+
+    if (description) {
+      toast.error(description);
+      return;
+    }
+
+    if (error === "oauth_provider_error") {
+      toast.error("Google sign-in failed. Check your Supabase Google provider configuration.");
+      return;
+    }
+
+    if (error === "auth_callback_error") {
+      toast.error("Google sign-in could not complete. Try again after the callback settings are updated.");
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +67,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthCallbackUrl("/dashboard", window.location.origin),
       },
     });
 

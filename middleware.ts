@@ -27,7 +27,13 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Do not remove this line!
+  // IMPORTANT: Don't call getUser on /auth/callback — let the route handler
+  // handle the OAuth code exchange. The middleware would otherwise interfere
+  // with the PKCE cookie flow.
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return supabaseResponse;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -49,7 +55,6 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/auth') &&
     request.nextUrl.pathname !== '/'
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -64,14 +69,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - auth routes (login, register, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|public|login|register|api/pdf).*)",
   ],
 };
