@@ -1,0 +1,27 @@
+{
+  "name": "sonner",
+  "version": "1.5.0",
+  "description": "An opinionated toast component for React.",
+  "main": "src/index.tsx",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.tsx --format cjs,mjs --dts",
+    "dev": "tsup src/index.tsx --format cjs,mjs --dts --watch"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
