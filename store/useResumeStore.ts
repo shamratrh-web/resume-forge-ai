@@ -43,6 +43,7 @@ const defaultTheme: ThemeConfig = {
     columns: 'single',
     leftColWidth: '30%',
     headerAlign: 'left',
+    summaryAlign: 'left',
     pageSize: 'A4',
   },
   photo: {

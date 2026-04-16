@@ -108,6 +108,7 @@ export interface Layout {
   columns: LayoutType;
   leftColWidth: string;
   headerAlign: 'left' | 'center' | 'right';
+  summaryAlign: 'left' | 'center' | 'right' | 'justify';
   pageSize: PageSize;
 }
 

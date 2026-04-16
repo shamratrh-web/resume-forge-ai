@@ -33,10 +33,12 @@ import {
   Plus,
   Image as ImageIcon,
   FileText,
-  LayoutTemplate
+  LayoutTemplate,
+  Sparkles
 } from 'lucide-react';
 import { SectionType } from '@/types/resume';
 import { TEMPLATES } from '@/lib/templates';
+import { MagicAIImport } from './MagicAIImport';
 
 export function EditorPanel() {
   return (
@@ -49,6 +51,13 @@ export function EditorPanel() {
           >
             <LayoutTemplate className="h-4 w-4 mr-2" />
             Templates
+          </TabsTrigger>
+          <TabsTrigger
+            value="ai"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3 text-primary"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Magic AI
           </TabsTrigger>
           <TabsTrigger
             value="content"
@@ -71,6 +80,10 @@ export function EditorPanel() {
             <TemplatesTab />
           </TabsContent>
 
+          <TabsContent value="ai" className="p-4 mt-0 outline-none">
+            <MagicAIImport />
+          </TabsContent>
+
           <TabsContent value="content" className="p-4 mt-0 outline-none">
             <ContentTab />
           </TabsContent>
@@ -83,6 +96,7 @@ export function EditorPanel() {
     </div>
   );
 }
+
 
 function TemplatesTab() {
   const { resume, setTheme } = useResumeStore();
@@ -616,6 +630,24 @@ function DesignTab() {
                   <SelectItem value="left">Left</SelectItem>
                   <SelectItem value="center">Center</SelectItem>
                   <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-2 block">Summary Alignment</Label>
+              <Select
+                value={theme.layout.summaryAlign}
+                onValueChange={(value) => handleLayoutChange('summaryAlign', value)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                  <SelectItem value="justify">Justify</SelectItem>
                 </SelectContent>
               </Select>
             </div>

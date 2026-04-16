@@ -176,8 +176,9 @@ export function ResumePreview() {
                 content={personalInfo.summary}
                 onChange={(val) => updatePersonalInfo('summary', val)}
                 className={cn(
-                  theme.layout.headerAlign === 'center' && "text-center", 
-                  theme.layout.headerAlign === 'right' && "text-right"
+                  theme.layout.summaryAlign === 'center' && "text-center", 
+                  theme.layout.summaryAlign === 'right' && "text-right",
+                  theme.layout.summaryAlign === 'justify' && "text-justify"
                 )}
               />
             </div>

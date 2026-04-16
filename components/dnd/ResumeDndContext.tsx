@@ -87,7 +87,7 @@ export function ResumeDndContext({ }: ResumeDndContextProps) {
     // Handle section reordering
     if (activeParts[0] === 'section' && overParts[0] === 'section') {
       if (activeIdStr !== overIdStr) {
-        reorderSections(activeIdStr, overIdStr);
+        reorderSections(activeParts[1], overParts[1]);
       }
     }
 
@@ -99,7 +99,7 @@ export function ResumeDndContext({ }: ResumeDndContextProps) {
       if (sourceSectionId === targetSectionId) {
         // Same section - reorder
         if (activeIdStr !== overIdStr) {
-          reorderItems(sourceSectionId, activeIdStr, overIdStr);
+          reorderItems(sourceSectionId, activeParts[1], overParts[1]);
         }
       }
     }
@@ -133,12 +133,16 @@ export function ResumeDndContext({ }: ResumeDndContextProps) {
     const activeParts = activeIdStr.split('__');
     const overParts = overIdStr.split('__');
 
-    if (activeParts[0] === 'section') {
-      reorderSections(activeIdStr, overIdStr);
+    if (activeParts[0] === 'section' && overParts[0] === 'section') {
+      reorderSections(activeParts[1], overParts[1]);
+    } else if (activeParts[0] === 'item' && overParts[0] === 'item') {
+      const sectionId = activeParts[2];
+      reorderItems(sectionId, activeParts[1], overParts[1]);
     }
   };
 
   const handleDragEndItem = (event: DragEndEvent) => {
+    // This seems redundant now as handleDragEnd handles both, but keeping it if needed by other components
     const { active, over } = event;
     
     setActiveId(null);
@@ -155,7 +159,7 @@ export function ResumeDndContext({ }: ResumeDndContextProps) {
 
     if (activeParts[0] === 'item' && overParts[0] === 'item') {
       const sectionId = activeParts[2];
-      reorderItems(sectionId, activeIdStr, overIdStr);
+      reorderItems(sectionId, activeParts[1], overParts[1]);
     }
   };
 

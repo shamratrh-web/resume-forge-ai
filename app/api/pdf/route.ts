@@ -124,10 +124,11 @@ function generateResumeHtml(
   const margins = theme.spacing.margins || { top: '40px', right: '40px', bottom: '40px', left: '40px' };
   const photo = theme.photo || { visible: false };
 
-  const sectionsHtml = content.sections
-    .filter((section: any) => section.isVisible)
-    .map((section: any) => `
-      <div class="section" style="margin-bottom: ${theme.spacing.section};">
+  const renderSection = (section: any) => {
+    if (!section.isVisible) return '';
+
+    return `
+      <section class="section" style="margin-bottom: ${theme.spacing.section};">
         <h2 class="section-title" style="
           font-size: ${subHeaderFontSize};
           color: ${theme.colors.primary};
@@ -141,54 +142,74 @@ function generateResumeHtml(
         </h2>
         
         <div class="section-items" style="display: flex; flex-direction: column; gap: ${theme.spacing.item};">
-          ${section.items.map((item: any) => `
+          ${section.items.map((item: any) => {
+      const visibility = item.fieldVisibility || {
+        title: true,
+        subtitle: true,
+        date: true,
+        location: true,
+        description: true
+      };
+
+      const isVisible = (field: string) => visibility[field] !== false;
+
+      return `
             <div class="item">
-              <div class="item-header" style="display: flex; justify-content: space-between; align-items: baseline;">
-                <div class="item-title-wrapper">
-                  <h3 class="item-title" style="
-                    font-size: ${baseFontSize};
-                    font-weight: 600;
-                    margin: 0;
-                  ">${item.title || ''}</h3>
-                  ${(item.subtitle || item.organization) ? `
-                    <p class="item-subtitle" style="
+              ${(isVisible('title') || isVisible('date')) ? `
+                <div class="item-header" style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                  ${isVisible('title') ? `
+                    <h3 class="item-title" style="
+                      font-size: ${baseFontSize};
+                      font-weight: 600;
+                      margin: 0;
+                    ">${item.title || ''}</h3>
+                  ` : '<div></div>'}
+                  
+                  ${isVisible('date') ? `
+                    <div class="item-date" style="
                       font-size: ${smallFontSize};
                       color: ${theme.colors.muted};
-                      margin: 0;
+                      text-align: right;
+                      white-space: nowrap;
+                    ">
+                      ${item.date || ''}${item.current ? ' - Present' : item.dateEnd ? ` - ${item.dateEnd}` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+
+              ${(isVisible('subtitle') || isVisible('location')) ? `
+                <div class="item-subheader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  ${isVisible('subtitle') ? `
+                    <div class="item-subtitle" style="
+                      font-size: ${smallFontSize};
+                      color: ${theme.colors.muted};
                       font-weight: 500;
-                    ">${item.subtitle || item.organization}</p>
-                  ` : ''}
-                </div>
-                
-                <div class="item-date-wrapper" style="text-align: right;">
-                  ${(item.date || item.dateEnd) ? `
-                    <p class="item-date" style="
+                    ">${item.subtitle || item.organization || ''}</div>
+                  ` : '<div></div>'}
+                  
+                  ${isVisible('location') ? `
+                    <div class="item-location" style="
                       font-size: ${smallFontSize};
                       color: ${theme.colors.muted};
-                      margin: 0;
-                    ">${item.date}${item.current ? ' - Present' : item.dateEnd ? ` - ${item.dateEnd}` : ''}</p>
-                  ` : ''}
-                  ${item.location ? `
-                    <p class="item-location" style="
-                      font-size: ${smallFontSize};
-                      color: ${theme.colors.muted};
-                      margin: 0;
-                    ">${item.location}</p>
+                      text-align: right;
+                    ">${item.location || ''}</div>
                   ` : ''}
                 </div>
-              </div>
+              ` : ''}
               
-              ${item.description ? `
+              ${isVisible('description') && item.description ? `
                 <div class="item-description prose" style="
                   font-size: ${smallFontSize};
                   margin-top: 4px;
+                  line-height: 1.4;
                 ">${item.description}</div>
               ` : ''}
               
               ${item.bullets && item.bullets.length > 0 ? `
                 <ul class="item-bullets" style="
                   margin-top: 4px;
-                  padding-left: 16px;
+                  padding-left: 18px;
                   margin-bottom: 0;
                   list-style-type: disc;
                 ">
@@ -196,6 +217,7 @@ function generateResumeHtml(
                     <li class="bullet-item" style="
                       font-size: ${smallFontSize};
                       margin-bottom: 2px;
+                      line-height: 1.4;
                     ">${bullet}</li>
                   `).join('')}
                 </ul>
@@ -221,10 +243,38 @@ function generateResumeHtml(
                 </div>
               ` : ''}
             </div>
-          `).join('')}
+          `;
+    }).join('')}
+        </div>
+      </section>
+    `;
+  };
+
+  const mainColumnTypes = ['experience', 'projects', 'education', 'custom'];
+  const sidebarColumnTypes = ['skills', 'languages', 'certifications', 'interests'];
+
+  let sectionsHtml = '';
+  if (theme.layout.columns === 'double') {
+    const mainSections = content.sections.filter(s => mainColumnTypes.includes(s.type));
+    const sidebarSections = content.sections.filter(s => sidebarColumnTypes.includes(s.type));
+
+    sectionsHtml = `
+      <div class="columns-wrapper" style="display: flex; gap: 40px; align-items: flex-start;">
+        <div class="main-column" style="flex: 2;">
+          ${mainSections.map(renderSection).join('')}
+        </div>
+        <div class="sidebar-column" style="flex: 1; border-left: 1px solid ${theme.colors.border}; padding-left: 40px; height: 100%;">
+          ${sidebarSections.map(renderSection).join('')}
         </div>
       </div>
-    `).join('');
+    `;
+  } else {
+    sectionsHtml = `
+      <div class="single-column">
+        ${content.sections.map(renderSection).join('')}
+      </div>
+    `;
+  }
 
   return `
     <!DOCTYPE html>
@@ -238,6 +288,7 @@ function generateResumeHtml(
         
         * {
           box-sizing: border-box;
+          -webkit-print-color-adjust: exact;
         }
         
         body {
@@ -251,33 +302,36 @@ function generateResumeHtml(
           padding-bottom: ${margins.bottom};
           padding-left: ${margins.left};
           line-height: 1.5;
+          width: 100%;
         }
 
         .prose p { margin: 0; }
-        .prose ul { margin: 0; padding-left: 16px; }
+        .prose ul { margin: 0; padding-left: 18px; }
         .prose li { margin: 0; }
         
         .resume-header {
           padding-bottom: ${theme.spacing.section};
           border-bottom: 1px solid ${theme.colors.border};
           margin-bottom: ${theme.spacing.section};
+          width: 100%;
         }
 
         .header-content {
           display: flex;
           align-items: flex-start;
           gap: 24px;
+          flex-direction: ${theme.layout.headerAlign === 'right' ? 'row-reverse' : 'row'};
         }
         
         .header-text {
           flex: 1;
+          text-align: ${theme.layout.headerAlign};
         }
         
         .resume-name {
           font-size: ${headerFontSize};
           color: ${theme.colors.primary};
           margin: 0;
-          text-align: ${theme.layout.headerAlign};
           font-weight: bold;
           line-height: 1.2;
         }
@@ -286,7 +340,6 @@ function generateResumeHtml(
           font-size: ${subHeaderFontSize};
           color: ${theme.colors.muted};
           margin: 4px 0 0 0;
-          text-align: ${theme.layout.headerAlign};
         }
         
         .resume-contact {
@@ -301,7 +354,7 @@ function generateResumeHtml(
         
         .resume-summary {
           margin-top: 12px;
-          text-align: ${theme.layout.headerAlign};
+          text-align: ${theme.layout.summaryAlign};
         }
 
         .photo-container {
@@ -323,13 +376,15 @@ function generateResumeHtml(
       </style>
     </head>
     <body>
-      <div class="resume-header">
-        <div class="header-content">
-          ${photo.visible && theme.layout.headerAlign === 'left' ? `
+      <div class="resume-header" style="${theme.layout.headerAlign === 'center' ? 'text-align: center;' : ''}">
+        <div class="header-content" style="${theme.layout.headerAlign === 'center' ? 'flex-direction: column; align-items: center;' : ''}">
+          ${photo.visible ? `
             <div class="photo-container">
               ${content.personalInfo.avatar ?
         `<img src="${content.personalInfo.avatar}" class="photo ${photo.shape || 'square'} ${photo.grayscale ? 'grayscale' : ''}" />` :
-        `<div class="photo ${photo.shape || 'square'}" style="background: #e2e8f0;"></div>`
+        `<div class="photo ${photo.shape || 'square'}" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>`
       }
             </div>
           ` : ''}
@@ -350,19 +405,10 @@ function generateResumeHtml(
               <div class="resume-summary prose">${content.personalInfo.summary}</div>
             ` : ''}
           </div>
-
-          ${photo.visible && theme.layout.headerAlign !== 'left' ? `
-            <div class="photo-container">
-              ${content.personalInfo.avatar ?
-        `<img src="${content.personalInfo.avatar}" class="photo ${photo.shape || 'square'} ${photo.grayscale ? 'grayscale' : ''}" />` :
-        `<div class="photo ${photo.shape || 'square'}" style="background: #e2e8f0;"></div>`
-      }
-            </div>
-          ` : ''}
         </div>
       </div>
       
-      <div class="resume-sections">
+      <div class="resume-content">
         ${sectionsHtml}
       </div>
     </body>

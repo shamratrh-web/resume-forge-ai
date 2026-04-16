@@ -1,7 +1,11 @@
 "use client";
 
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
+import { 
+  useSortable, 
+  SortableContext, 
+  verticalListSortingStrategy 
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { useResumeStore } from '@/store/useResumeStore';
@@ -117,14 +121,19 @@ export function SortableSection({ section }: SortableSectionProps) {
             <div className="space-y-4 pt-2 pb-4">
               {/* Section Items */}
               <div className="space-y-3">
-                {section.items.map((item, index) => (
-                  <SortableItem
-                    key={item.id}
-                    item={item}
-                    sectionId={section.id}
-                    index={index}
-                  />
-                ))}
+                <SortableContext
+                  items={section.items.map((item) => `item__${item.id}__${section.id}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {section.items.map((item, index) => (
+                    <SortableItem
+                      key={item.id}
+                      item={item}
+                      sectionId={section.id}
+                      index={index}
+                    />
+                  ))}
+                </SortableContext>
               </div>
 
               {/* Add Item Button */}
