@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DeepSeekAPI } from '@/lib/ai/DeepSeek';
-import { config as aiConfig } from '@/lib/ai/deep-config';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -53,6 +52,31 @@ const defaultSectionTitleByType: Record<string, string> = {
   languages: 'Languages',
   interests: 'Interests',
   custom: 'Custom Section',
+};
+
+const toSafeString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const normalizePersonalInfo = (rawPersonalInfo: any = {}) => {
+  const rawContact = rawPersonalInfo?.contact || {};
+
+  return {
+    ...rawPersonalInfo,
+    name: toSafeString(rawPersonalInfo?.name) || '',
+    title: toSafeString(rawPersonalInfo?.title) || '',
+    summary: toSafeString(rawPersonalInfo?.summary) || '',
+    contact: {
+      email: toSafeString(rawContact?.email) || toSafeString(rawPersonalInfo?.email) || '',
+      phone: toSafeString(rawContact?.phone) || toSafeString(rawPersonalInfo?.phone) || '',
+      location: toSafeString(rawContact?.location) || toSafeString(rawPersonalInfo?.location) || '',
+      website: toSafeString(rawContact?.website) || toSafeString(rawPersonalInfo?.website) || '',
+      linkedin: toSafeString(rawContact?.linkedin) || toSafeString(rawPersonalInfo?.linkedin) || '',
+      github: toSafeString(rawContact?.github) || toSafeString(rawPersonalInfo?.github) || '',
+    },
+  };
 };
 
 export async function POST(req: NextRequest) {
@@ -123,6 +147,7 @@ Critical rules:
 - Use type "projects" for all project sections.
 - Do not drop sections just because heading names differ.
 - If a section doesn't fit standard types, use "custom".
+- For any custom field that does not exactly fit this schema, preserve it inside the closest item's "description" or "bullets" so no important information is lost.
 Return ONLY the JSON block. No preamble or postamble.`;
 
     let fullContent = '';
@@ -143,6 +168,8 @@ Return ONLY the JSON block. No preamble or postamble.`;
 
     const extractedData = JSON.parse(jsonMatch[0]);
 
+    extractedData.personalInfo = normalizePersonalInfo(extractedData.personalInfo);
+
     // Ensure IDs, canonical section types, and valid structure
     if (Array.isArray(extractedData.sections)) {
       extractedData.sections = extractedData.sections
@@ -159,10 +186,19 @@ Return ONLY the JSON block. No preamble or postamble.`;
             items: normalizedItems.map((item: any) => ({
               ...item,
               id: uuidv4(),
+              title: toSafeString(item?.title) || '',
+              subtitle: toSafeString(item?.subtitle) || toSafeString(item?.organization) || '',
+              location: toSafeString(item?.location) || '',
+              date: toSafeString(item?.date) || '',
+              dateEnd: toSafeString(item?.dateEnd) || '',
+              description: toSafeString(item?.description) || '',
+              current: Boolean(item?.current),
               bullets: Array.isArray(item?.bullets) ? item.bullets : [],
             })),
           };
         });
+    } else {
+      extractedData.sections = [];
     }
 
     return NextResponse.json(extractedData);

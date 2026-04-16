@@ -224,6 +224,12 @@ function ContentTab() {
                   onChange={(e) => updateContactInfo('linkedin', e.target.value)}
                   className="h-10 md:h-9 text-base md:text-sm"
                 />
+                <Input
+                  placeholder="GitHub"
+                  value={personalInfo.contact.github || ''}
+                  onChange={(e) => updateContactInfo('github', e.target.value)}
+                  className="h-10 md:h-9 text-base md:text-sm"
+                />
               </div>
             </div>
           </AccordionContent>

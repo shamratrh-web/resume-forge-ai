@@ -49,10 +49,17 @@ export function MagicAIImport() {
 
       const extractedData = await response.json();
       
-      // Map extracted data to current resume structure, preserving theme
+      // Map extracted data to current resume structure, preserving theme and any local-only fields.
       const newResume = {
         ...resume,
-        personalInfo: extractedData.personalInfo || resume.personalInfo,
+        personalInfo: {
+          ...resume.personalInfo,
+          ...(extractedData.personalInfo || {}),
+          contact: {
+            ...resume.personalInfo.contact,
+            ...(extractedData.personalInfo?.contact || {}),
+          },
+        },
         sections: extractedData.sections || resume.sections,
         title: extractedData.personalInfo?.name ? `${extractedData.personalInfo.name}'s Resume` : resume.title
       };

@@ -448,6 +448,7 @@ function generateResumeHtml(
               ${content.personalInfo.contact.location ? `<span>${content.personalInfo.contact.location}</span>` : ''}
               ${content.personalInfo.contact.website ? `<span>${content.personalInfo.contact.website}</span>` : ''}
               ${content.personalInfo.contact.linkedin ? `<span>${content.personalInfo.contact.linkedin}</span>` : ''}
+              ${content.personalInfo.contact.github ? `<span>${content.personalInfo.contact.github}</span>` : ''}
             </div>
           </div>
         </div>

@@ -151,7 +151,7 @@ export function ResumePreview() {
             )}
             style={{ color: theme.colors.muted }}
           >
-            {['email', 'phone', 'location', 'website', 'linkedin'].map((field) => (
+            {['email', 'phone', 'location', 'website', 'linkedin', 'github'].map((field) => (
               personalInfo.contact[field as keyof typeof personalInfo.contact] && (
                 <span key={field} className="relative group/contact inline-flex items-center">
                   <PreviewEditor 
@@ -169,22 +169,26 @@ export function ResumePreview() {
               )
             ))}
           </div>
-
-          {personalInfo.summary && (
-            <div className="mt-4">
-              <PreviewEditor 
-                content={personalInfo.summary}
-                onChange={(val) => updatePersonalInfo('summary', val)}
-                className={cn(
-                  theme.layout.summaryAlign === 'center' && "text-center", 
-                  theme.layout.summaryAlign === 'right' && "text-right",
-                  theme.layout.summaryAlign === 'justify' && "text-justify"
-                )}
-              />
-            </div>
-          )}
         </div>
       </header>
+
+      {personalInfo.summary && (
+        <section
+          className={cn(
+            "mb-8 summary-wrapper",
+            theme.layout.summaryAlign === 'center' && "text-center",
+            theme.layout.summaryAlign === 'right' && "text-right",
+            theme.layout.summaryAlign === 'justify' && "text-justify"
+          )}
+          style={{ color: theme.colors.muted }}
+        >
+          <PreviewEditor
+            content={personalInfo.summary}
+            onChange={(val) => updatePersonalInfo('summary', val)}
+            className="summary-editor"
+          />
+        </section>
+      )}
 
       {theme.layout.columns === 'double' ? (
         <div className="flex gap-10 items-start">

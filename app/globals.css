@@ -149,6 +149,22 @@
   @apply outline-none bg-muted;
 }
 
+/* Summary editor reset to avoid default ProseMirror margins */
+.summary-editor {
+  padding: 0;
+}
+
+.summary-editor p,
+.summary-editor ul,
+.summary-editor ol {
+  margin: 0;
+}
+
+.summary-editor ul,
+.summary-editor ol {
+  padding-left: 1.25rem;
+}
+
 /* Page break visual indicator for preview */
 .page-indicator {
   position: absolute;
