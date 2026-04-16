@@ -4,6 +4,13 @@ import React, { useState, useRef } from 'react';
 import { useResumeStore } from '@/store/useResumeStore';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   FileUp, 
   Loader2, 
@@ -13,10 +20,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+type WritingMode = 'strict' | 'smart';
+
 export function MagicAIImport() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [writingMode, setWritingMode] = useState<WritingMode>('strict');
+  const [jobDescription, setJobDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setResume, resume } = useResumeStore();
 
@@ -35,6 +46,8 @@ export function MagicAIImport() {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('mode', writingMode);
+    formData.append('jobDescription', jobDescription.trim());
 
     try {
       const response = await fetch('/api/resume/extract', {
@@ -81,6 +94,43 @@ export function MagicAIImport() {
 
   return (
     <div className="space-y-6">
+      <div className="space-y-4 p-4 border rounded-xl bg-white dark:bg-slate-900/20 border-slate-200 dark:border-slate-800">
+        <div>
+          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">
+            Writing Mode
+          </Label>
+          <Select value={writingMode} onValueChange={(value) => setWritingMode(value as WritingMode)}>
+            <SelectTrigger className="h-10 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="strict">Strict (Preserve Wording)</SelectItem>
+              <SelectItem value="smart">Smart (Humanized, HR-Friendly)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            {writingMode === 'strict'
+              ? 'Strict keeps wording very close to source and focuses on faithful extraction.'
+              : 'Smart rewrites for concise, professional, easy-to-scan language while preserving meaning and facts.'}
+          </p>
+        </div>
+
+        <div>
+          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">
+            Job Description (Optional)
+          </Label>
+          <textarea
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            placeholder="Paste the job description to tailor keywords and emphasis..."
+            className="w-full min-h-[120px] rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Tailoring will align phrasing and emphasis to the role without adding fake experience.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800 text-center">
         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
           <Sparkles className="h-6 w-6 text-primary" />
@@ -142,10 +192,10 @@ export function MagicAIImport() {
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">How it works</h4>
         <ul className="space-y-3">
           {[
-            { step: 1, text: "Upload your existing PDF resume" },
-            { step: 2, text: "AI parses your experience, education, and skills" },
-            { step: 3, text: "Fields are automatically filled in the editor" },
-            { step: 4, text: "Review and fine-tune your new resume" }
+            { step: 1, text: "Choose Strict or Smart mode and optional job description" },
+            { step: 2, text: "Upload your existing PDF resume" },
+            { step: 3, text: "AI parses all sections and fills editable fields" },
+            { step: 4, text: "Review and fine-tune your tailored resume" }
           ].map((item) => (
             <li key={item.step} className="flex items-center text-sm">
               <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold mr-3 shrink-0">
