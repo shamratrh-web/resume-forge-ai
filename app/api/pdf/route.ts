@@ -7,14 +7,8 @@ import puppeteer from 'puppeteer';
 
 export async function POST(request: NextRequest) {
   try {
-    const { resumeId } = await request.json();
-
-    if (!resumeId) {
-      return NextResponse.json(
-        { error: 'Resume ID is required' },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
+    const { resumeId, preview = false, content, theme_config, title } = body;
 
     // Authenticate user
     const supabase = await createClient();
@@ -27,30 +21,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch resume from database
-    const { data: resume, error } = await supabase
-      .from('resumes')
-      .select('*')
-      .eq('id', resumeId)
-      .single();
+    let resumeContent = content;
+    let resumeTheme = theme_config;
+    let resumeTitle = title || 'resume';
 
-    if (error || !resume) {
-      return NextResponse.json(
-        { error: 'Resume not found' },
-        { status: 404 }
-      );
-    }
+    // If inline data is not provided, fallback to DB by resumeId
+    if (!resumeContent || !resumeTheme) {
+      if (!resumeId) {
+        return NextResponse.json(
+          { error: 'Resume ID is required' },
+          { status: 400 }
+        );
+      }
 
-    // Verify ownership
-    if (resume.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      const { data: resume, error } = await supabase
+        .from('resumes')
+        .select('*')
+        .eq('id', resumeId)
+        .single();
+
+      if (error || !resume) {
+        return NextResponse.json(
+          { error: 'Resume not found' },
+          { status: 404 }
+        );
+      }
+
+      // Verify ownership
+      if (resume.user_id !== user.id) {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
+        );
+      }
+
+      resumeContent = resume.content;
+      resumeTheme = resume.theme_config;
+      resumeTitle = resume.title || resumeTitle;
     }
 
     // Generate HTML for PDF
-    const html = generateResumeHtml(resume.content, resume.theme_config);
+    const html = generateResumeHtml(resumeContent, resumeTheme);
 
     // Launch Puppeteer
     const browser = await puppeteer.launch({
@@ -67,7 +78,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Determine page size
-      const pageSize = resume.theme_config.layout.pageSize || 'A4';
+      const pageSize = resumeTheme.layout.pageSize || 'A4';
       const width = pageSize === 'Letter' ? '215.9mm' : '210mm';
       const height = pageSize === 'Letter' ? '279.4mm' : '297mm';
 
@@ -84,12 +95,18 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const pageCountMatch = Buffer.from(pdf)
+        .toString('latin1')
+        .match(/\/Type\s*\/Page\b/g);
+      const pageCount = pageCountMatch?.length || 1;
+
       // Return PDF as response
       return new NextResponse(pdf as any, {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${resume.title || 'resume'}.pdf"`,
+          'Content-Disposition': `${preview ? 'inline' : 'attachment'}; filename="${resumeTitle || 'resume'}.pdf"`,
           'Content-Length': pdf.length.toString(),
+          'X-Page-Count': String(pageCount),
         },
       });
     } finally {
@@ -283,7 +300,7 @@ function generateResumeHtml(
       <meta charset="UTF-8">
       <style>
         @page {
-          margin: 0;
+          margin: ${margins.top} ${margins.right} ${margins.bottom} ${margins.left};
         }
         
         * {
@@ -297,10 +314,7 @@ function generateResumeHtml(
           color: ${theme.colors.text};
           background-color: ${theme.colors.background};
           margin: 0;
-          padding-top: ${margins.top};
-          padding-right: ${margins.right};
-          padding-bottom: ${margins.bottom};
-          padding-left: ${margins.left};
+          padding: 0;
           line-height: 1.5;
           width: 100%;
         }
@@ -354,7 +368,12 @@ function generateResumeHtml(
         
         .resume-summary {
           margin-top: 12px;
+          margin-bottom: ${theme.spacing.section};
           text-align: ${theme.layout.summaryAlign};
+        }
+
+        .resume-summary p {
+          margin: 0;
         }
 
         .photo-container {
@@ -373,6 +392,36 @@ function generateResumeHtml(
         .photo.circle { border-radius: 50%; }
         .photo.rounded { border-radius: 8px; }
         .photo.grayscale { filter: grayscale(100%); }
+
+        /* Page break controls */
+        .section {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .item {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        h2, h3 {
+          break-after: avoid;
+          page-break-after: avoid;
+        }
+
+        ul, ol {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        /* Page numbers */
+        @page {
+          @bottom-center {
+            content: counter(page) " of " counter(pages);
+            font-size: 9pt;
+            color: ${theme.colors.muted};
+          }
+        }
       </style>
     </head>
     <body>
@@ -400,14 +449,14 @@ function generateResumeHtml(
               ${content.personalInfo.contact.website ? `<span>${content.personalInfo.contact.website}</span>` : ''}
               ${content.personalInfo.contact.linkedin ? `<span>${content.personalInfo.contact.linkedin}</span>` : ''}
             </div>
-            
-            ${content.personalInfo.summary ? `
-              <div class="resume-summary prose">${content.personalInfo.summary}</div>
-            ` : ''}
           </div>
         </div>
       </div>
       
+      ${content.personalInfo.summary ? `
+        <div class="resume-summary prose">${content.personalInfo.summary}</div>
+      ` : ''}
+
       <div class="resume-content">
         ${sectionsHtml}
       </div>

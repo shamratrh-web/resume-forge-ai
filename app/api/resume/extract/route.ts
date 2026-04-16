@@ -8,6 +8,53 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
 
+const normalizeSectionType = (rawType: unknown, title: unknown) => {
+  const normalized = String(rawType || '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+
+  const titleNorm = String(title || '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+
+  const candidate = normalized || titleNorm;
+
+  if (['experience', 'workexperience', 'professionalexperience', 'employment'].includes(candidate)) {
+    return 'experience';
+  }
+  if (['education', 'academic', 'academics', 'qualification', 'qualifications'].includes(candidate)) {
+    return 'education';
+  }
+  if (['skills', 'technicalskills', 'corecompetencies', 'competencies'].includes(candidate)) {
+    return 'skills';
+  }
+  if (['project', 'projects', 'personalprojects', 'keyprojects'].includes(candidate)) {
+    return 'projects';
+  }
+  if (['certification', 'certifications', 'licenses', 'awards'].includes(candidate)) {
+    return 'certifications';
+  }
+  if (['language', 'languages'].includes(candidate)) {
+    return 'languages';
+  }
+  if (['interest', 'interests', 'hobbies'].includes(candidate)) {
+    return 'interests';
+  }
+
+  return 'custom';
+};
+
+const defaultSectionTitleByType: Record<string, string> = {
+  experience: 'Work Experience',
+  education: 'Education',
+  skills: 'Skills',
+  projects: 'Projects',
+  certifications: 'Certifications',
+  languages: 'Languages',
+  interests: 'Interests',
+  custom: 'Custom Section',
+};
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -71,7 +118,11 @@ The JSON must follow this exact structure:
     }
   ]
 }
-If a section doesn't fit standard types, use "custom".
+Critical rules:
+- ALWAYS include a Projects section if project-like content exists (e.g., "Project", "Projects", "Personal Projects", "Academic Projects").
+- Use type "projects" for all project sections.
+- Do not drop sections just because heading names differ.
+- If a section doesn't fit standard types, use "custom".
 Return ONLY the JSON block. No preamble or postamble.`;
 
     let fullContent = '';
@@ -92,18 +143,26 @@ Return ONLY the JSON block. No preamble or postamble.`;
 
     const extractedData = JSON.parse(jsonMatch[0]);
 
-    // Ensure IDs and valid structure
-    if (extractedData.sections) {
-      extractedData.sections = extractedData.sections.map((section: any) => ({
-        ...section,
-        id: uuidv4(),
-        isVisible: true,
-        items: (section.items || []).map((item: any) => ({
-          ...item,
-          id: uuidv4(),
-          bullets: item.bullets || []
-        }))
-      }));
+    // Ensure IDs, canonical section types, and valid structure
+    if (Array.isArray(extractedData.sections)) {
+      extractedData.sections = extractedData.sections
+        .map((section: any) => {
+          const mappedType = normalizeSectionType(section?.type, section?.title);
+          const normalizedItems = Array.isArray(section?.items) ? section.items : [];
+
+          return {
+            ...section,
+            id: uuidv4(),
+            type: mappedType,
+            title: section?.title || defaultSectionTitleByType[mappedType] || 'Custom Section',
+            isVisible: true,
+            items: normalizedItems.map((item: any) => ({
+              ...item,
+              id: uuidv4(),
+              bullets: Array.isArray(item?.bullets) ? item.bullets : [],
+            })),
+          };
+        });
     }
 
     return NextResponse.json(extractedData);

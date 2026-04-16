@@ -37,6 +37,7 @@ export const TEMPLATES: Template[] = [
         columns: 'single',
         leftColWidth: '0%',
         headerAlign: 'left',
+        summaryAlign: 'left',
         pageSize: 'A4',
       },
       photo: {
@@ -79,6 +80,7 @@ export const TEMPLATES: Template[] = [
         columns: 'double',
         leftColWidth: '32%',
         headerAlign: 'left',
+        summaryAlign: 'left',
         pageSize: 'A4',
       },
       photo: {
@@ -121,6 +123,7 @@ export const TEMPLATES: Template[] = [
         columns: 'single',
         leftColWidth: '0%',
         headerAlign: 'center',
+        summaryAlign: 'left',
         pageSize: 'A4',
       },
       photo: {
@@ -163,6 +166,7 @@ export const TEMPLATES: Template[] = [
         columns: 'single',
         leftColWidth: '0%',
         headerAlign: 'left',
+        summaryAlign: 'left',
         pageSize: 'Letter',
       },
       photo: {

@@ -93,6 +93,27 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+
+  /* Page break controls for print */
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  ul, ol {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
 
 /* Custom Scrollbar */
@@ -126,6 +147,20 @@
 
 [contenteditable]:focus {
   @apply outline-none bg-muted;
+}
+
+/* Page break visual indicator for preview */
+.page-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed #e2e8f0;
+  padding: 4px;
+  text-align: center;
+  font-size: 9px;
+  color: #94a3b8;
+  background: #f8fafc;
 }
 
 /* Animation Classes */

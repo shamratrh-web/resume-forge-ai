@@ -15,12 +15,9 @@ import {
   ArrowLeft,
   Save,
   Download,
-  Share2,
   Loader2,
-  Undo2,
-  Redo2,
-  Eye,
-  EyeOff,
+  FileText,
+  Pencil,
 } from 'lucide-react';
 
 interface EditorPageProps {
@@ -45,9 +42,12 @@ export default function EditorPage({ params }: EditorPageProps) {
   } = useResumeStore();
   
   const [isLoading, setIsLoading] = useState(true);
-  const [showPreview, setShowPreview] = useState(true);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [zoom, setZoom] = useState(100);
+  const [pageCount, setPageCount] = useState(1);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'edit' | 'pdf'>('edit');
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -108,6 +108,57 @@ export default function EditorPage({ params }: EditorPageProps) {
 
     fetchResume();
   }, [resolvedParams.id, router, setResume, resetResume]);
+
+  useEffect(() => {
+    if (previewMode !== 'pdf') return;
+
+    let urlToRevoke: string | null = null;
+
+    const buildPdfPreview = async () => {
+      setIsPreviewLoading(true);
+
+      try {
+        const response = await fetch('/api/pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            preview: true,
+            content: {
+              personalInfo: resume.personalInfo,
+              sections: resume.sections,
+            },
+            theme_config: resume.theme,
+            title: resume.title,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate preview PDF');
+        }
+
+        const pagesHeader = response.headers.get('X-Page-Count');
+        setPageCount(pagesHeader ? Number(pagesHeader) : 1);
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        urlToRevoke = objectUrl;
+        setPreviewUrl(objectUrl);
+      } catch {
+        setPreviewUrl(null);
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    };
+
+    const timer = setTimeout(buildPdfPreview, 450);
+
+    return () => {
+      clearTimeout(timer);
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+    };
+  }, [previewMode, resume.personalInfo, resume.sections, resume.theme, resume.title]);
 
   // Auto-save functionality
   const saveResume = async () => {
@@ -283,8 +334,31 @@ export default function EditorPage({ params }: EditorPageProps) {
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
-          {/* Desktop Zoom/View Controls */}
-          <div className="hidden md:flex items-center gap-1 mr-4">
+          {/* Desktop Preview Controls */}
+          <div className="hidden md:flex items-center gap-2 mr-4">
+            <div className="flex items-center bg-slate-100 rounded-md p-1">
+              <button
+                onClick={() => setPreviewMode('edit')}
+                className={cn(
+                  'px-2 py-1 text-xs rounded flex items-center gap-1',
+                  previewMode === 'edit' ? 'bg-white shadow-sm text-primary' : 'text-slate-600'
+                )}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+              <button
+                onClick={() => setPreviewMode('pdf')}
+                className={cn(
+                  'px-2 py-1 text-xs rounded flex items-center gap-1',
+                  previewMode === 'pdf' ? 'bg-white shadow-sm text-primary' : 'text-slate-600'
+                )}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                PDF
+              </button>
+            </div>
+
             <Button variant="ghost" size="icon" onClick={() => setZoom(Math.max(50, zoom - 10))}>
               <span className="text-sm">−</span>
             </Button>
@@ -330,16 +404,86 @@ export default function EditorPage({ params }: EditorPageProps) {
 
         {/* Preview Canvas - Scrollable, Toggleable on Mobile */}
         <div className={cn(
-          "flex-1 overflow-auto bg-slate-200/50 p-4 md:p-8 flex justify-center transition-transform duration-300 w-full absolute md:relative z-10 h-full",
+          "flex-1 overflow-auto bg-slate-200/50 p-4 md:p-8 flex flex-col items-center gap-4 transition-transform duration-300 w-full absolute md:relative z-10 h-full",
           activeTab === 'preview' ? "translate-x-0" : "translate-x-full md:translate-x-0"
         )}>
           <div
             className="transition-transform duration-200 origin-top"
             style={{ transform: `scale(${activeTab === 'preview' && typeof window !== 'undefined' && window.innerWidth < 768 ? (window.innerWidth - 32) / 794 : zoom / 100})` }}
           >
-            <div className="bg-white shadow-2xl mb-20" style={{ width: '210mm' }}>
-              <ResumePreview />
+            <div className="md:hidden mb-2 flex items-center justify-center">
+              <div className="flex items-center bg-slate-100 rounded-md p-1">
+                <button
+                  onClick={() => setPreviewMode('edit')}
+                  className={cn(
+                    'px-2 py-1 text-xs rounded flex items-center gap-1',
+                    previewMode === 'edit' ? 'bg-white shadow-sm text-primary' : 'text-slate-600'
+                  )}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setPreviewMode('pdf')}
+                  className={cn(
+                    'px-2 py-1 text-xs rounded flex items-center gap-1',
+                    previewMode === 'pdf' ? 'bg-white shadow-sm text-primary' : 'text-slate-600'
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  PDF
+                </button>
+              </div>
             </div>
+
+            {/* Page Indicator (только для точного PDF-режима) */}
+            {previewMode === 'pdf' && (
+              <div className="text-xs text-slate-500 mb-2 font-medium text-center">
+                {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+              </div>
+            )}
+
+            {previewMode === 'edit' ? (
+              <div
+                className="bg-white shadow-2xl overflow-hidden"
+                style={{
+                  width: resume.theme.layout.pageSize === 'Letter' ? '8.5in' : '210mm',
+                  minHeight: resume.theme.layout.pageSize === 'Letter' ? '11in' : '297mm',
+                }}
+              >
+                <ResumePreview />
+              </div>
+            ) : (
+              <div
+                className="relative bg-white shadow-2xl"
+                style={{
+                  width: resume.theme.layout.pageSize === 'Letter' ? '8.5in' : '210mm',
+                  minHeight: resume.theme.layout.pageSize === 'Letter' ? '11in' : '297mm',
+                }}
+              >
+                {isPreviewLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
+                    <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+                  </div>
+                )}
+
+                {previewUrl ? (
+                  <iframe
+                    title="PDF Preview"
+                    src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                    className="w-full"
+                    style={{
+                      height: resume.theme.layout.pageSize === 'Letter' ? 'calc(11in * 1.5)' : 'calc(297mm * 1.5)',
+                      border: 'none',
+                    }}
+                  />
+                ) : (
+                  <div className="h-full min-h-[60vh] flex items-center justify-center text-sm text-slate-500">
+                    Preview unavailable
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
